@@ -62,6 +62,19 @@
             @endif
         </div>
 
+        <div class="field">
+            <label>Returns Sync Frequency</label>
+            <select name="returns_sync_frequency">
+                @foreach ($options as $val => $label)
+                    <option value="{{ $val }}" {{ $shop->returns_sync_frequency == $val ? "selected" : "" }}>{{ $label }}</option>
+                @endforeach
+            </select>
+            <div class="hint">How often returned/refunded orders are refreshed.</div>
+            @if ($shop->returns_last_synced_at)
+                <div class="last-synced">Last synced: {{ $shop->returns_last_synced_at->diffForHumans() }}</div>
+            @endif
+        </div>
+
         <button type="submit" class="submit-btn">Save Settings</button>
     </div>
 </form>

@@ -16,7 +16,10 @@
     .pagination-wrap { margin-top:20px; }
 </style>
 
-<h1>Product Returns Report</h1>
+<div style="display:flex; justify-content:space-between; align-items:center;">
+    <h1 style="margin:0;">Product Returns Report</h1>
+    <span id="syncTimer" style="font-size:13px; color:#555; background:#f0f0f0; padding:8px 14px; border-radius:20px; display:inline-block; font-weight:500;"></span>
+</div>
 
 <div class="stat-grid">
     <div class="stat-card"><div class="label">Total Returned Orders</div><div class="value">{{ $totalReturns }}</div></div>
@@ -51,4 +54,45 @@
 <div class="pagination-wrap">
     {{ $returns->links('vendor.pagination.custom') }}
 </div>
+
+<script>
+(function() {
+    let remaining = {{ $secondsRemaining ?? 300 }};
+    const freq = {{ $freqSeconds ?? 300 }};
+    const timerEl = document.getElementById('syncTimer');
+
+    function formatTime(s) {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return m + ':' + sec.toString().padStart(2, '0');
+    }
+
+    function tick() {
+        if (!timerEl) return;
+        if (remaining <= 0) {
+            timerEl.textContent = 'Syncing...';
+            fetch("{{ route('reports.returns.sync.ajax') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '',
+                    'Accept': 'application/json',
+                },
+            })
+            .then(r => r.json())
+            .then(data => {
+                window.location.reload();
+            })
+            .catch(() => {
+                remaining = freq;
+            });
+            return;
+        }
+        timerEl.textContent = 'Next auto-sync in ' + formatTime(remaining);
+        remaining--;
+    }
+
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
 @endsection

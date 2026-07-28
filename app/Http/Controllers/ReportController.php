@@ -255,6 +255,26 @@ class ReportController extends Controller
             ->whereIn('financial_status', ['refunded', 'partially_refunded'])
             ->sum('total_price');
 
-        return view('reports.returns', compact('returns', 'totalReturns', 'totalReturnedValue'));
+        $freqSeconds = $shop->returns_sync_frequency * 60;
+        $lastSync = $shop->returns_last_synced_at;
+        $secondsElapsed = $lastSync ? now()->diffInSeconds($lastSync) : $freqSeconds;
+        $secondsRemaining = max(0, $freqSeconds - $secondsElapsed);
+
+        return view('reports.returns', compact('returns', 'totalReturns', 'totalReturnedValue', 'secondsRemaining', 'freqSeconds'));
+    }
+
+    public function returnsSyncAjax(Request $request, \App\Services\SalesSyncService $salesSyncService)
+    {
+        $shop = Auth::user();
+
+        try {
+            $salesSyncService->syncOrders($shop);
+            $shop->returns_last_synced_at = now();
+            $shop->save();
+
+            return response()->json(['success' => true, 'message' => 'Returns synced']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

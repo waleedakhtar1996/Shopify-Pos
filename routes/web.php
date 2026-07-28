@@ -17,7 +17,7 @@ Route::post('/login', [ShopLoginController::class, 'login'])->name('login.submit
 Route::post('/logout', [ShopLoginController::class, 'logout'])->name('logout');
 
 Route::group(['middleware' => ['auth']], function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [DashboardController::class, 'profile'])->name('profile');
     Route::post('/profile', [DashboardController::class, 'updateProfile'])->name('profile.update');
 
@@ -78,5 +78,6 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/reports/barcode-inventory', [ReportController::class, 'barcodeInventory'])->name('reports.barcode-inventory');
     Route::get('/reports/payment-type', [ReportController::class, 'paymentType'])->name('reports.payment-type');
     Route::get('/reports/returns', [ReportController::class, 'returns'])->name('reports.returns');
+    Route::post('/reports/returns/sync-ajax', [ReportController::class, 'returnsSyncAjax'])->name('reports.returns.sync.ajax');
     Route::post('/collections/sync', [ProductController::class, 'syncCollections'])->name('collections.sync');
 });
