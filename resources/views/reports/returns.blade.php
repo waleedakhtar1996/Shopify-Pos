@@ -18,6 +18,9 @@
 
 <div style="display:flex; justify-content:space-between; align-items:center;">
     <h1 style="margin:0;">Product Returns Report</h1>
+
+@include('reports.partials.date-filter')
+
     <span id="syncTimer" style="font-size:13px; color:#555; background:#f0f0f0; padding:8px 14px; border-radius:20px; display:inline-block; font-weight:500;"></span>
 </div>
 
@@ -67,10 +70,17 @@
         return m + ':' + sec.toString().padStart(2, '0');
     }
 
+    let syncing = false;
+
     function tick() {
         if (!timerEl) return;
         if (remaining <= 0) {
+            if (syncing) return;
+            syncing = true;
             timerEl.textContent = 'Syncing...';
+            if (window.showGlobalSyncOverlay) {
+                window.showGlobalSyncOverlay('Syncing from Shopify...', 'This may take a moment.');
+            }
             fetch("{{ route('reports.returns.sync.ajax') }}", {
                 method: 'POST',
                 headers: {
@@ -83,6 +93,7 @@
                 window.location.reload();
             })
             .catch(() => {
+                syncing = false;
                 remaining = freq;
             });
             return;

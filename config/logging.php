@@ -57,6 +57,18 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        'data_access' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/data-access.log'),
+            'level' => 'info',
+        ],
+
+        'data_access' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/data-access.log'),
+            'level' => 'info',
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

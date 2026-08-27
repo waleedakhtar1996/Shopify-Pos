@@ -21,12 +21,16 @@ class SettingsController extends Controller
         $validated = $request->validate([
             'orders_sync_frequency' => 'required|integer|in:5,10,15,20,25,30',
             'returns_sync_frequency' => 'required|integer|in:5,10,15,20,25,30',
+            'collections_sync_frequency' => 'required|integer|in:5,10,15,20,25,30',
+            'collections_sync_frequency' => 'required|integer|in:5,10,15,20,25,30',
             'customers_sync_frequency' => 'required|integer|in:5,10,15,20,25,30',
             'products_sync_frequency' => 'required|integer|in:5,10,15,20,25,30',
         ]);
 
         $shop->orders_sync_frequency = $validated['orders_sync_frequency'];
         $shop->returns_sync_frequency = $validated['returns_sync_frequency'];
+        $shop->collections_sync_frequency = $validated['collections_sync_frequency'];
+        $shop->collections_sync_frequency = $validated['collections_sync_frequency'];
         $shop->customers_sync_frequency = $validated['customers_sync_frequency'];
         $shop->products_sync_frequency = $validated['products_sync_frequency'];
         $shop->save();

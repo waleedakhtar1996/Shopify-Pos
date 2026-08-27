@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Collection;
+use App\Services\ShopifyProductSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -15,11 +16,15 @@ class CollectionController extends Controller
         $shop = Auth::user();
 
         $collections = Collection::where('user_id', $shop->id)
-            ->withCount('products')
             ->latest()
             ->get();
 
-        return view('collections.index', compact('collections'));
+        $freqSeconds = $shop->collections_sync_frequency * 60;
+        $lastSync = $shop->collections_last_synced_at;
+        $secondsElapsed = $lastSync ? now()->diffInSeconds($lastSync) : $freqSeconds;
+        $secondsRemaining = max(0, $freqSeconds - $secondsElapsed);
+
+        return view('collections.index', compact('collections', 'secondsRemaining', 'freqSeconds'));
     }
 
     public function create()
@@ -68,7 +73,6 @@ class CollectionController extends Controller
                 'type' => 'custom',
             ]);
 
-            // Push image to Shopify collection if provided
             if ($imageUrl) {
                 try {
                     $fullPath = storage_path('app/public/' . str_replace('/storage/', '', parse_url($imageUrl, PHP_URL_PATH)));
@@ -149,6 +153,66 @@ class CollectionController extends Controller
         }
 
         return redirect()->route('collections.index')->with('success', 'Collection updated!');
+    }
+
+    public function sync(Request $request, ShopifyProductSyncService $syncService)
+    {
+        $shop = Auth::user();
+
+        try {
+            $count = $syncService->syncCollections($shop);
+            $shop->collections_last_synced_at = now();
+            $shop->save();
+            return redirect()->route('collections.index')->with('success', "Synced {$count} collections from Shopify!");
+        } catch (\Exception $e) {
+            return redirect()->route('collections.index')->with('error', 'Sync failed: ' . $e->getMessage());
+        }
+    }
+
+    public function listForSync(Request $request)
+    {
+        $shop = Auth::user();
+        $ids = Collection::where('user_id', $shop->id)->pluck('id');
+        return response()->json(['ids' => $ids]);
+    }
+
+    public function syncOne(Request $request, ShopifyProductSyncService $syncService, $id)
+    {
+        $shop = Auth::user();
+        $collection = Collection::where('user_id', $shop->id)->where('id', $id)->first();
+
+        if (!$collection) {
+            return response()->json(['success' => false, 'message' => 'Not found'], 404);
+        }
+
+        try {
+            $syncService->syncOneCollection($shop, $collection);
+            return response()->json(['success' => true, 'title' => $collection->title]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function markSynced(Request $request)
+    {
+        $shop = Auth::user();
+        $shop->collections_last_synced_at = now();
+        $shop->save();
+        return response()->json(['success' => true]);
+    }
+
+    public function syncAjax(Request $request, ShopifyProductSyncService $syncService)
+    {
+        $shop = Auth::user();
+
+        try {
+            $count = $syncService->syncCollections($shop);
+            $shop->collections_last_synced_at = now();
+            $shop->save();
+            return response()->json(['success' => true, 'message' => "Synced {$count} collections"]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Collection $collection)

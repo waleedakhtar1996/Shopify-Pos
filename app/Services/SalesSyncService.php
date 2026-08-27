@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
-use Illuminate\Support\Facades\Log;
 
 class SalesSyncService
 {
@@ -15,28 +14,29 @@ class SalesSyncService
         return $shop->api();
     }
 
-    /**
-     * Sync all orders (and their customers) from Shopify.
-     */
     public function syncOrders(User $shop, int $limit = 250)
     {
         $api = $this->api($shop);
         $count = 0;
+        $params = ['status' => 'any', 'limit' => $limit];
 
-        $response = $api->rest('GET', '/admin/api/2024-04/orders.json', [
-            'status' => 'any',
-            'limit' => $limit,
-        ]);
+        do {
+            $response = $api->rest('GET', '/admin/api/2024-04/orders.json', $params);
+            $orders = $response['body']['orders'] ?? [];
 
-        \Illuminate\Support\Facades\Log::info('Orders raw response: ' . json_encode($response));
+            foreach ($orders as $orderData) {
+                $orderData = is_array($orderData) ? $orderData : $orderData->toArray();
+                $this->saveOrder($shop, $orderData);
+                $count++;
+            }
 
-        $orders = $response['body']['orders'] ?? [];
-
-        foreach ($orders as $orderData) {
-            $orderData = is_array($orderData) ? $orderData : $orderData->toArray();
-            $this->saveOrder($shop, $orderData);
-            $count++;
-        }
+            // Cursor-based pagination via link object
+            $params = [];
+            $nextPageInfo = $response['link']['next'] ?? null;
+            if ($nextPageInfo) {
+                $params = ['limit' => $limit, 'page_info' => $nextPageInfo];
+            }
+        } while (!empty($params));
 
         return $count;
     }
@@ -83,6 +83,19 @@ class SalesSyncService
             ]));
         }
 
+        $totalRefunded = 0;
+        if (!empty($data['refunds'])) {
+            foreach ($data['refunds'] as $refund) {
+                $refund = is_array($refund) ? $refund : (array) $refund;
+                foreach (($refund['transactions'] ?? []) as $txn) {
+                    $txn = is_array($txn) ? $txn : (array) $txn;
+                    if (($txn['kind'] ?? '') === 'refund') {
+                        $totalRefunded += (float) ($txn['amount'] ?? 0);
+                    }
+                }
+            }
+        }
+
         $order = Order::updateOrCreate(
             [
                 'user_id' => $shop->id,
@@ -98,6 +111,7 @@ class SalesSyncService
                 'total_tax' => $data['total_tax'] ?? 0,
                 'total_discounts' => $data['total_discounts'] ?? 0,
                 'total_price' => $data['total_price'] ?? 0,
+                'total_refunded' => $totalRefunded,
                 'currency' => $data['currency'] ?? null,
                 'customer_name' => $customer ? $customer->full_name : ($data['email'] ?? null),
                 'customer_email' => $data['email'] ?? null,
@@ -106,7 +120,6 @@ class SalesSyncService
             ]
         );
 
-        // Sync line items
         $lineItems = $data['line_items'] ?? [];
         $keepIds = [];
 
@@ -129,12 +142,10 @@ class SalesSyncService
             $keepIds[] = $orderItem->id;
         }
 
-        // Remove line items that no longer exist on Shopify
         $order->items()->whereNotIn('id', $keepIds)->delete();
 
-        // Recalculate customer stats from local orders (more reliable than Shopify's snapshot field)
         if ($customer) {
-            $stats = \App\Models\Order::where('customer_id', $customer->id)
+            $stats = Order::where('customer_id', $customer->id)
                 ->selectRaw('COUNT(*) as cnt, SUM(total_price) as total')
                 ->first();
             $customer->update([
@@ -173,9 +184,6 @@ class SalesSyncService
         );
     }
 
-    /**
-     * Sync all customers directly from Shopify (in case some have no orders yet).
-     */
     public function syncCustomers(User $shop, int $limit = 250)
     {
         $api = $this->api($shop);
@@ -185,12 +193,25 @@ class SalesSyncService
             'limit' => $limit,
         ]);
 
-        \Illuminate\Support\Facades\Log::info('Customers raw response: ' . json_encode($response));
-
         $customers = $response['body']['customers'] ?? [];
 
         foreach ($customers as $customerData) {
             $customerData = is_array($customerData) ? $customerData : $customerData->toArray();
+
+            if (!empty($customerData['default_address'])) {
+                $addr = is_array($customerData['default_address']) ? $customerData['default_address'] : (array) $customerData['default_address'];
+                $customerData['city'] = $addr['city'] ?? null;
+                $customerData['country'] = $addr['country'] ?? null;
+                if (empty($customerData['phone']) && !empty($addr['phone'])) {
+                    $customerData['phone'] = $addr['phone'];
+                }
+                $customerData['address'] = implode(', ', array_filter([
+                    $addr['address1'] ?? null,
+                    $addr['province'] ?? null,
+                    $addr['zip'] ?? null,
+                ]));
+            }
+
             $this->saveCustomer($shop, $customerData);
             $count++;
         }

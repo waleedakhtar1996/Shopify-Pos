@@ -65,11 +65,12 @@ class DashboardController extends Controller
         // Product status breakdown
         $draftProducts = Product::where('user_id', $shop->id)->where('status', 'draft')->count();
         $archivedProducts = Product::where('user_id', $shop->id)->where('status', 'archived')->count();
+        $unlistedProducts = Product::where('user_id', $shop->id)->where('status', 'unlisted')->count();
 
         return view('dashboard', compact(
             'totalProducts', 'activeProducts', 'totalOrders', 'totalSales',
             'totalCustomers', 'monthExpenses', 'lowStockCount', 'recentOrders',
-            'chartLabels', 'chartTotals', 'expenseCategories', 'draftProducts', 'archivedProducts'
+            'chartLabels', 'chartTotals', 'expenseCategories', 'draftProducts', 'archivedProducts', 'unlistedProducts'
         ));
     }
 

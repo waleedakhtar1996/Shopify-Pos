@@ -50,5 +50,6 @@ class User extends Authenticatable implements IShopModel
         'customers_last_synced_at' => 'datetime',
         'products_last_synced_at' => 'datetime',
         'returns_last_synced_at' => 'datetime',
+        'collections_last_synced_at' => 'datetime',
     ];
 }

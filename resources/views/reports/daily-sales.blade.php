@@ -14,6 +14,8 @@
 
 <div class="top-bar">
     <h1>Daily Sales Report</h1>
+
+
     <form method="GET">
         <select name="days" onchange="this.form.submit()">
             <option value="7" {{ $days == 7 ? 'selected' : '' }}>Last 7 days</option>

@@ -4,11 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ExpenseController extends Controller
 {
+    protected function paymentTypes($shop)
+    {
+        $fromOrders = Order::where('user_id', $shop->id)
+            ->whereNotNull('payment_method')
+            ->distinct()
+            ->pluck('payment_method');
+
+        $defaults = collect(['Cash', 'Bank Transfer']);
+
+        return $fromOrders->merge($defaults)->unique()->sort()->values();
+    }
+
     public function index(Request $request)
     {
         $shop = Auth::user();
@@ -49,8 +62,9 @@ class ExpenseController extends Controller
     {
         $shop = Auth::user();
         $categories = ExpenseCategory::where('user_id', $shop->id)->orderBy('name')->get();
+        $paymentTypes = $this->paymentTypes($shop);
 
-        return view('expenses.create', compact('categories'));
+        return view('expenses.create', compact('categories', 'paymentTypes'));
     }
 
     public function store(Request $request)
@@ -61,6 +75,7 @@ class ExpenseController extends Controller
             'title' => 'required|string|max:255',
             'expense_category_id' => 'nullable|exists:expense_categories,id',
             'amount' => 'required|numeric|min:0',
+            'payment_type' => 'nullable|string|max:100',
             'expense_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
@@ -70,6 +85,7 @@ class ExpenseController extends Controller
             'expense_category_id' => $validated['expense_category_id'] ?? null,
             'title' => $validated['title'],
             'amount' => $validated['amount'],
+            'payment_type' => $validated['payment_type'] ?? null,
             'expense_date' => $validated['expense_date'],
             'notes' => $validated['notes'] ?? null,
         ]);
@@ -85,8 +101,9 @@ class ExpenseController extends Controller
         }
 
         $categories = ExpenseCategory::where('user_id', $shop->id)->orderBy('name')->get();
+        $paymentTypes = $this->paymentTypes($shop);
 
-        return view('expenses.edit', compact('expense', 'categories'));
+        return view('expenses.edit', compact('expense', 'categories', 'paymentTypes'));
     }
 
     public function update(Request $request, Expense $expense)
@@ -100,6 +117,7 @@ class ExpenseController extends Controller
             'title' => 'required|string|max:255',
             'expense_category_id' => 'nullable|exists:expense_categories,id',
             'amount' => 'required|numeric|min:0',
+            'payment_type' => 'nullable|string|max:100',
             'expense_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
@@ -108,6 +126,7 @@ class ExpenseController extends Controller
             'expense_category_id' => $validated['expense_category_id'] ?? null,
             'title' => $validated['title'],
             'amount' => $validated['amount'],
+            'payment_type' => $validated['payment_type'] ?? null,
             'expense_date' => $validated['expense_date'],
             'notes' => $validated['notes'] ?? null,
         ]);

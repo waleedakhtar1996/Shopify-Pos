@@ -53,6 +53,15 @@
             </div>
         </div>
         <div class="field">
+            <label>Payment Type</label>
+            <select name="payment_type">
+                <option value="">Select payment type</option>
+                @foreach ($paymentTypes as $type)
+                    <option value="{{ $type }}" {{ old('payment_type', $expense->payment_type) == $type ? 'selected' : '' }}>{{ $type }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
             <label>Date *</label>
             <input type="date" name="expense_date" value="{{ old('expense_date', $expense->expense_date->format('Y-m-d')) }}" required>
         </div>

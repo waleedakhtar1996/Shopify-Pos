@@ -75,6 +75,20 @@
             @endif
         </div>
 
+        <div class="field">
+            <label>Collections Sync Frequency</label>
+            <select name="collections_sync_frequency">
+                @foreach ($options as $val => $label)
+                    <option value="{{ $val }}" {{ $shop->collections_sync_frequency == $val ? "selected" : "" }}>{{ $label }}</option>
+                @endforeach
+            </select>
+            <div class="hint">How often collections are refreshed automatically.</div>
+            @if ($shop->collections_last_synced_at)
+                <div class="last-synced">Last synced: {{ $shop->collections_last_synced_at->diffForHumans() }}</div>
+                <div class="last-synced">Last synced: {{ $shop->collections_last_synced_at->diffForHumans() }}</div>
+            @endif
+        </div>
+
         <button type="submit" class="submit-btn">Save Settings</button>
     </div>
 </form>

@@ -11,7 +11,10 @@
 </style>
 
 <h1>Payment Type Report</h1>
-<p style="color:#666;">Sales grouped by payment method (includes Shopify POS custom gateways).</p>
+
+@include('reports.partials.date-filter')
+
+<p style="color:#666;">Sales, expenses, and purchases grouped by payment method (includes Shopify POS custom gateways).</p>
 
 <div class="chart-card">
     <canvas id="paymentChart"></canvas>
@@ -23,19 +26,35 @@
             <th>Payment Method</th>
             <th>Orders</th>
             <th>Total Sales</th>
+            <th>Total Expenses</th>
+            <th>Total Purchases</th>
+            <th>Remaining</th>
         </tr>
     </thead>
     <tbody>
         @forelse ($data as $row)
             <tr>
-                <td>{{ ucfirst($row->method) }}</td>
+                <td>{{ $row->display_method }}</td>
                 <td>{{ $row->cnt }}</td>
                 <td>{{ $currencySymbol }}{{ number_format($row->total, 2) }}</td>
+                <td style="color:#c0392b;">{{ $currencySymbol }}{{ number_format($row->expense_total, 2) }}</td>
+                <td style="color:#c0392b;">{{ $currencySymbol }}{{ number_format($row->purchase_total, 2) }}</td>
+                <td style="color:{{ $row->remaining >= 0 ? '#155724' : '#c0392b' }}; font-weight:600;">{{ $currencySymbol }}{{ number_format($row->remaining, 2) }}</td>
             </tr>
         @empty
-            <tr><td colspan="3" style="text-align:center; padding:30px; color:#888;">No payment data yet.</td></tr>
+            <tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">No payment data yet.</td></tr>
         @endforelse
     </tbody>
+    <tfoot>
+        <tr style="font-weight:600; background:#fafafa;">
+            <td>Total</td>
+            <td>{{ $data->sum('cnt') }}</td>
+            <td>{{ $currencySymbol }}{{ number_format($totalSales, 2) }}</td>
+            <td style="color:#c0392b;">{{ $currencySymbol }}{{ number_format($totalExpensesForPaymentTypes, 2) }}</td>
+            <td style="color:#c0392b;">{{ $currencySymbol }}{{ number_format($totalPurchasesForPaymentTypes, 2) }}</td>
+            <td style="color:{{ $totalRemaining >= 0 ? '#155724' : '#c0392b' }};">{{ $currencySymbol }}{{ number_format($totalRemaining, 2) }}</td>
+        </tr>
+    </tfoot>
 </table>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -43,7 +62,7 @@
 new Chart(document.getElementById('paymentChart'), {
     type: 'pie',
     data: {
-        labels: @json($data->pluck('method')),
+        labels: @json($data->pluck('display_method')),
         datasets: [{
             data: @json($data->pluck('total')),
             backgroundColor: ['#008060','#1a56db','#c0392b','#856404','#6f42c1','#20c997','#e83e8c','#fd7e14']

@@ -16,6 +16,7 @@ class Collection extends Model
         'image',
         'description',
         'type',
+        'products_count_cache',
     ];
 
     public function shop()
@@ -25,6 +26,6 @@ class Collection extends Model
 
     public function products()
     {
-        return $this->hasMany(\App\Models\Product::class, 'collection', 'title');
+        return $this->belongsToMany(Product::class, 'collection_product');
     }
 }

@@ -13,11 +13,15 @@
 
 <h1>Total Products Report</h1>
 
+@include('reports.partials.date-filter')
+
+
 <div class="stat-grid">
     <div class="stat-card"><div class="label">Total Products</div><div class="value">{{ $total }}</div></div>
     <div class="stat-card"><div class="label">Active</div><div class="value" style="color:#155724;">{{ $active }}</div></div>
     <div class="stat-card"><div class="label">Draft</div><div class="value" style="color:#666;">{{ $draft }}</div></div>
     <div class="stat-card"><div class="label">Archived</div><div class="value" style="color:#721c24;">{{ $archived }}</div></div>
+    <div class="stat-card"><div class="label">Unlisted</div><div class="value" style="color:#856404;">{{ $unlisted }}</div></div>
     <div class="stat-card"><div class="label">Total Variants</div><div class="value">{{ $totalVariants }}</div></div>
 </div>
 
@@ -31,10 +35,10 @@
 new Chart(document.getElementById('statusChart'), {
     type: 'pie',
     data: {
-        labels: ['Active', 'Draft', 'Archived'],
+        labels: ['Active', 'Draft', 'Archived', 'Unlisted'],
         datasets: [{
-            data: [{{ $active }}, {{ $draft }}, {{ $archived }}],
-            backgroundColor: ['#155724', '#999', '#721c24']
+            data: [{{ $active }}, {{ $draft }}, {{ $archived }}, {{ $unlisted }}],
+            backgroundColor: ['#155724', '#999', '#721c24', '#856404']
         }]
     },
     options: { responsive: true }

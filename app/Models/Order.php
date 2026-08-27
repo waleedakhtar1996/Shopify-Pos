@@ -21,6 +21,7 @@ class Order extends Model
         'total_tax',
         'total_discounts',
         'total_price',
+        'total_refunded',
         'currency',
         'customer_name',
         'customer_email',

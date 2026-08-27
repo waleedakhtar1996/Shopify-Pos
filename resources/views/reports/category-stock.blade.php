@@ -12,6 +12,8 @@
 
 <h1>Category-wise Stock</h1>
 
+
+
 <div class="chart-card">
     <canvas id="catChart"></canvas>
 </div>

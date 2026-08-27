@@ -11,6 +11,9 @@
 </style>
 
 <h1>Top 10 Fast Moving Products</h1>
+
+@include('reports.partials.date-filter')
+
 <p style="color:#666;">Best-selling products by quantity.</p>
 
 <div class="chart-card">

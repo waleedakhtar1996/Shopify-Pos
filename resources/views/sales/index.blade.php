@@ -35,7 +35,7 @@
 </div>
 
 <form method="GET" action="{{ route('sales.index') }}" class="filter-bar">
-    <input type="text" name="search" placeholder="Search order #, customer..." value="{{ request('search') }}">
+    <input type="text" name="search" placeholder="Search order #..." value="{{ request('search') }}">
     <select name="financial_status">
         <option value="all">All Payment Statuses</option>
         <option value="paid" {{ request('financial_status') == 'paid' ? 'selected' : '' }}>Paid</option>
@@ -48,6 +48,10 @@
         <option value="unfulfilled" {{ request('fulfillment_status') == 'unfulfilled' ? 'selected' : '' }}>Unfulfilled</option>
         <option value="partial" {{ request('fulfillment_status') == 'partial' ? 'selected' : '' }}>Partial</option>
     </select>
+    <label style="font-size:13px; color:#666; margin:0;">From:</label>
+    <input type="date" name="date_from" value="{{ request('date_from') }}">
+    <label style="font-size:13px; color:#666; margin:0;">To:</label>
+    <input type="date" name="date_to" value="{{ request('date_to') }}">
     <select name="sort">
         <option value="newest" {{ request('sort', 'newest') == 'newest' ? 'selected' : '' }}>Newest First</option>
         <option value="oldest" {{ request('sort') == 'oldest' ? 'selected' : '' }}>Oldest First</option>
@@ -122,6 +126,8 @@
         return m + ":" + sec.toString().padStart(2, "0");
     }
 
+    let syncing = false;
+
     function tick() {
         if (!timerEl) return;
         if (remaining <= 0) {
@@ -138,6 +144,7 @@
                 window.location.reload();
             })
             .catch(() => {
+                syncing = false;
                 remaining = freq;
             });
             return;

@@ -13,8 +13,12 @@
 
 <h1>Profit & Loss Report</h1>
 
+@include('reports.partials.date-filter')
+
+
 <div class="stat-grid">
     <div class="stat-card"><div class="label">Total Sales</div><div class="value" style="color:#155724;">{{ $currencySymbol }}{{ number_format($totalSales, 2) }}</div></div>
+    <div class="stat-card"><div class="label">Total Refunds</div><div class="value" style="color:#b8860b;">{{ $currencySymbol }}{{ number_format($totalRefunds, 2) }}</div></div>
     <div class="stat-card"><div class="label">Total Expenses</div><div class="value" style="color:#c0392b;">{{ $currencySymbol }}{{ number_format($totalExpenses, 2) }}</div></div>
     <div class="stat-card"><div class="label">Net Profit</div><div class="value" style="color:{{ $profit >= 0 ? '#155724' : '#c0392b' }};">{{ $currencySymbol }}{{ number_format($profit, 2) }}</div></div>
 </div>
@@ -32,7 +36,8 @@ new Chart(document.getElementById('pnlChart'), {
         labels: @json($months),
         datasets: [
             { label: 'Sales', data: @json($salesData), backgroundColor: '#008060' },
-            { label: 'Expenses', data: @json($expenseData), backgroundColor: '#c0392b' }
+            { label: 'Expenses', data: @json($expenseData), backgroundColor: '#c0392b' },
+            { label: 'Refunds', data: @json($refundData), backgroundColor: '#b8860b' }
         ]
     },
     options: { responsive: true }

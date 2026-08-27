@@ -19,6 +19,8 @@
 
 <h1>Barcode Inventory</h1>
 
+
+
 <div class="stat-grid">
     <div class="stat-card"><div class="label">Products with Barcode</div><div class="value">{{ $withBarcodeCount }}</div></div>
     <div class="stat-card"><div class="label">Total Products</div><div class="value">{{ $totalProducts }}</div></div>

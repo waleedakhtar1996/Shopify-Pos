@@ -49,7 +49,7 @@
     </div>
 
     <div class="dash-card">
-        <a href="{{ route('sales.customers') }}" class="view-all">View All →</a>
+        <a href="{{ route('sales.index') }}" class="view-all">View All →</a>
         <div class="label">Total Customers</div>
         <div class="value">{{ $totalCustomers }}</div>
     </div>
@@ -143,10 +143,10 @@ new Chart(document.getElementById('salesTrendChart'), {
 new Chart(document.getElementById('productStatusChart'), {
     type: 'pie',
     data: {
-        labels: ['Active', 'Draft', 'Archived'],
+        labels: ['Active', 'Draft', 'Archived', 'Unlisted'],
         datasets: [{
-            data: [{{ $activeProducts }}, {{ $draftProducts }}, {{ $archivedProducts }}],
-            backgroundColor: ['#155724', '#999', '#721c24']
+            data: [{{ $activeProducts }}, {{ $draftProducts }}, {{ $archivedProducts }}, {{ $unlistedProducts }}],
+            backgroundColor: ['#155724', '#999', '#721c24', '#856404']
         }]
     },
     options: { responsive: true }

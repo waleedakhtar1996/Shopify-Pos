@@ -128,6 +128,7 @@
         <div class="topbar-left">
             <button type="button" class="hamburger" onclick="toggleSidebar()">☰</button>
             <div class="shop-name">{{ Auth::user()->app_display_name ?: (Auth::user()->name ?? 'Adxsway POS') }}</div>
+            <div class="shop-domain-badge" style="font-size:11px;color:#888;margin-top:-4px;">{{ Auth::user()->name ?? "Not connected" }}</div>
         </div>
         <div class="user-menu">
             <button type="button" class="user-icon-btn" onclick="document.getElementById('userDropdown').classList.toggle('open')">
@@ -151,7 +152,7 @@
 
         <div class="menu-title">Inventory</div>
         <a href="{{ route('products.index') }}">Products <span style="float:right; background:#333; color:#fff; border-radius:10px; padding:1px 8px; font-size:11px;">{{ $sidebarProductsCount ?? 0 }}</span></a>
-        <a href="{{ route('collections.index') }}">Collections</a>
+        <a href="{{ route('collections.index') }}">Collections <span style="float:right; background:#333; color:#fff; border-radius:10px; padding:1px 8px; font-size:11px;">{{ $sidebarCollectionsCount ?? 0 }}</span></a>
 
         <div class="menu-title">Sales</div>
         <a href="{{ route('sales.index') }}">Orders <span style="float:right; background:#333; color:#fff; border-radius:10px; padding:1px 8px; font-size:11px;">{{ $sidebarOrdersCount ?? 0 }}</span></a>
@@ -160,6 +161,10 @@
         <div class="menu-title">Expenses</div>
         <a href="{{ route('expenses.index') }}">All Expenses</a>
         <a href="{{ route('expense-categories.index') }}">Categories</a>
+
+        <div class="menu-title">Purchases</div>
+        <a href="{{ route('purchases.index') }}">All Purchases</a>
+        <a href="{{ route('purchases.create') }}">+ New Purchase</a>
 
         <div class="menu-title">Reports</div>
         <a href="{{ route('reports.products') }}">Total Products</a>
@@ -240,6 +245,38 @@
             });
         });
     });
+    </script>
+    <div id="globalSyncOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:12px; padding:35px 45px; text-align:center; min-width:280px; box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+            <div style="width:44px; height:44px; border:4px solid #e0e0e0; border-top-color:#008060; border-radius:50%; margin:0 auto 18px; animation:globalSyncSpin 0.8s linear infinite;"></div>
+            <div id="globalSyncTitle" style="font-size:16px; font-weight:600; color:#222; margin-bottom:6px;">Syncing from Shopify...</div>
+            <div id="globalSyncSubtitle" style="font-size:13px; color:#888;">This may take a moment. Please don't close this page.</div>
+        </div>
+    </div>
+    <style>
+    @keyframes globalSyncSpin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+    (function() {
+        function showGlobalSyncOverlay(title, subtitle) {
+            const overlay = document.getElementById('globalSyncOverlay');
+            if (!overlay) return;
+            if (title) document.getElementById('globalSyncTitle').textContent = title;
+            if (subtitle) document.getElementById('globalSyncSubtitle').textContent = subtitle;
+            overlay.style.display = 'flex';
+        }
+
+        // Attach to every form whose action contains "sync" (covers all sync buttons app-wide)
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            if (form.tagName === 'FORM' && form.action && form.action.includes('sync')) {
+                showGlobalSyncOverlay('Syncing from Shopify...', 'This may take a moment. Please don\'t close this page.');
+            }
+        }, true);
+
+        // Also cover AJAX-based auto-sync timers used on report/list pages
+        window.showGlobalSyncOverlay = showGlobalSyncOverlay;
+    })();
     </script>
 </body>
 </html>

@@ -13,6 +13,9 @@
 
 <h1>Expense Report</h1>
 
+@include('reports.partials.date-filter')
+
+
 <div class="stat-grid">
     <div class="stat-card"><div class="label">Total Expenses</div><div class="value">{{ $currencySymbol }}{{ number_format($totalExpenses, 2) }}</div></div>
     <div class="stat-card"><div class="label">Uncategorized</div><div class="value">{{ $currencySymbol }}{{ number_format($uncategorized, 2) }}</div></div>

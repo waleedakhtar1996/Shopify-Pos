@@ -134,10 +134,17 @@
         return m + ':' + sec.toString().padStart(2, '0');
     }
 
+    let syncing = false;
+
     function tick() {
         if (!timerEl) return;
         if (remaining <= 0) {
+            if (syncing) return;
+            syncing = true;
             timerEl.textContent = 'Syncing...';
+            if (window.showGlobalSyncOverlay) {
+                window.showGlobalSyncOverlay('Syncing from Shopify...', 'This may take a moment.');
+            }
             fetch("{{ route('products.sync.ajax') }}", {
                 method: 'POST',
                 headers: {
@@ -150,6 +157,7 @@
                 window.location.reload();
             })
             .catch(() => {
+                syncing = false;
                 remaining = freq;
             });
             return;

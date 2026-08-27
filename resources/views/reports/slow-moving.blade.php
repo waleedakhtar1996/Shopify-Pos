@@ -11,6 +11,9 @@
 </style>
 
 <h1>Top 10 Slow Moving Products</h1>
+
+@include('reports.partials.date-filter')
+
 <p style="color:#666;">Products with the lowest sales quantity.</p>
 
 <table class="rep-table">

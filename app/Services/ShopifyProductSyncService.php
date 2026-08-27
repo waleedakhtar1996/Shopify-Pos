@@ -30,6 +30,41 @@ class ShopifyProductSyncService
         return $synced;
     }
 
+    public function syncVariantCosts(User $shop)
+    {
+        $api = $this->api($shop);
+        $updated = 0;
+
+        \App\Models\ProductVariant::whereHas('product', function ($q) use ($shop) {
+                $q->where('user_id', $shop->id);
+            })
+            ->whereNotNull('inventory_item_id')
+            ->select('id', 'inventory_item_id')
+            ->orderBy('id')
+            ->chunk(100, function ($variants) use ($api, &$updated) {
+                $ids = $variants->pluck('inventory_item_id')->implode(',');
+                $response = $api->rest('GET', '/admin/api/2024-04/inventory_items.json', ['ids' => $ids]);
+                $body = is_array($response['body']) ? $response['body'] : json_decode(json_encode($response['body']), true);
+                $items = $body['inventory_items'] ?? [];
+
+                $costByInvItemId = [];
+                foreach ($items as $item) {
+                    $item = is_array($item) ? $item : (array) $item;
+                    $costByInvItemId[$item['id']] = $item['cost'] ?? null;
+                }
+
+                foreach ($variants as $variant) {
+                    if (isset($costByInvItemId[$variant->inventory_item_id])) {
+                        $variant->cost = $costByInvItemId[$variant->inventory_item_id];
+                        $variant->save();
+                        $updated++;
+                    }
+                }
+            });
+
+        return $updated;
+    }
+
     protected function saveProduct(User $shop, $data)
     {
         $data = is_array($data) ? $data : $data->toArray();
@@ -67,6 +102,7 @@ class ShopifyProductSyncService
                     'barcode' => $variantData['barcode'] ?? null,
                     'price' => $variantData['price'] ?? 0,
                     'compare_at_price' => $variantData['compare_at_price'] ?? null,
+                    'inventory_item_id' => $variantData['inventory_item_id'] ?? null,
                     'inventory_quantity' => $variantData['inventory_quantity'] ?? 0,
                     'weight' => $variantData['weight'] ?? null,
                     'weight_unit' => $variantData['weight_unit'] ?? null,
@@ -96,19 +132,11 @@ class ShopifyProductSyncService
 
     protected function getNextPageParams($response)
     {
-        $headers = $response['headers'] ?? [];
-        $link = $headers['Link'] ?? $headers['link'] ?? null;
-        if (!$link) {
+        $nextPageInfo = $response['link']['next'] ?? null;
+        if (!$nextPageInfo) {
             return null;
         }
-        $linkStr = is_array($link) ? implode(',', $link) : $link;
-        if (preg_match('/<([^>]+)>;\s*rel="next"/', $linkStr, $matches)) {
-            $nextUrl = $matches[1];
-            $query = parse_url($nextUrl, PHP_URL_QUERY);
-            parse_str($query, $params);
-            return $params;
-        }
-        return null;
+        return ['limit' => 250, 'page_info' => $nextPageInfo];
     }
 
     /**
@@ -122,24 +150,98 @@ class ShopifyProductSyncService
         $custom = $api->rest('GET', '/admin/api/2024-04/custom_collections.json', ['limit' => 250]);
         foreach ($custom['body']['custom_collections'] ?? [] as $c) {
             $c = is_array($c) ? $c : $c->toArray();
-            Collection::updateOrCreate(
+            $imageUrl = $c['image']['src'] ?? null;
+            $collection = Collection::updateOrCreate(
                 ['user_id' => $shop->id, 'shopify_collection_id' => $c['id']],
-                ['title' => $c['title'], 'type' => 'custom']
+                ['title' => $c['title'], 'type' => 'custom', 'image' => $imageUrl, 'description' => $c['body_html'] ?? null]
             );
+            $this->syncCollectionProductCount($shop, $collection);
             $count++;
         }
 
         $smart = $api->rest('GET', '/admin/api/2024-04/smart_collections.json', ['limit' => 250]);
         foreach ($smart['body']['smart_collections'] ?? [] as $c) {
             $c = is_array($c) ? $c : $c->toArray();
-            Collection::updateOrCreate(
+            $imageUrl = $c['image']['src'] ?? null;
+            $collection = Collection::updateOrCreate(
                 ['user_id' => $shop->id, 'shopify_collection_id' => $c['id']],
-                ['title' => $c['title'], 'type' => 'smart']
+                ['title' => $c['title'], 'type' => 'smart', 'image' => $imageUrl, 'description' => $c['body_html'] ?? null]
             );
+            $this->syncCollectionProductCount($shop, $collection);
             $count++;
         }
 
         return $count;
+    }
+
+    public function syncOneCollection(User $shop, Collection $collection)
+    {
+        $this->syncCollectionProductCount($shop, $collection);
+    }
+
+    protected function syncCollectionProductCount(User $shop, Collection $collection)
+    {
+        try {
+            $api = $this->api($shop);
+            $shopifyProductIds = collect();
+
+            if ($collection->type === 'smart') {
+                // Smart collections: collects.json doesn't work, use products.json?collection_id=
+                $sinceId = 0;
+                do {
+                    $response = $api->rest('GET', '/admin/api/2024-04/products.json', [
+                        'collection_id' => $collection->shopify_collection_id,
+                        'limit' => 250,
+                        'since_id' => $sinceId,
+                        'fields' => 'id',
+                    ]);
+                    $rawProducts = $response['body']['products'] ?? [];
+                    $products = is_array($rawProducts) ? $rawProducts : (method_exists($rawProducts, 'toArray') ? $rawProducts->toArray() : (array) $rawProducts);
+                    $normalized = [];
+                    foreach ($products as $p) {
+                        $p = is_array($p) ? $p : (method_exists($p, 'toArray') ? $p->toArray() : (array) $p);
+                        $normalized[] = $p;
+                        $shopifyProductIds->push($p['id'] ?? null);
+                    }
+                    $lastItem = count($normalized) > 0 ? $normalized[count($normalized) - 1] : null;
+                    $sinceId = $lastItem['id'] ?? 0;
+                } while (count($products) >= 250);
+            } else {
+                // Custom collections: paginate through collects.json
+                $sinceId = 0;
+                do {
+                    $response = $api->rest('GET', '/admin/api/2024-04/collects.json', [
+                        'collection_id' => $collection->shopify_collection_id,
+                        'limit' => 250,
+                        'since_id' => $sinceId,
+                    ]);
+                    $collects = $response['body']['collects'] ?? [];
+                    $lastId = 0;
+                    foreach ($collects as $c) {
+                        $c = is_array($c) ? $c : (array) $c;
+                        if (isset($c['container'])) {
+                            $c = is_array($c['container']) ? $c['container'] : (array) $c['container'];
+                        }
+                        $shopifyProductIds->push($c['product_id'] ?? null);
+                        $lastId = $c['id'] ?? $lastId;
+                    }
+                    $sinceId = $lastId;
+                } while (count($collects) >= 250);
+            }
+
+            $shopifyProductIds = $shopifyProductIds->filter()->unique()->values();
+
+            $collection->products_count_cache = $shopifyProductIds->count();
+            $collection->save();
+
+            $localProductIds = Product::where('user_id', $shop->id)
+                ->whereIn('shopify_product_id', $shopifyProductIds)
+                ->pluck('id');
+
+            $collection->products()->sync($localProductIds);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Collection product count sync failed for ' . $collection->title . ': ' . $e->getMessage());
+        }
     }
 
     public function createAndPushProduct(User $shop, array $productData, array $variantsData = [], array $imageUrls = [], $collectionId = null)

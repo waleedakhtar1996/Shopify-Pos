@@ -59,8 +59,10 @@
             <th>#</th>
             <th>Title</th>
             <th>Category</th>
+            <th>Payment Type</th>
             <th>Date</th>
             <th>Amount</th>
+            <th>Notes</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -76,8 +78,10 @@
                         <span style="color:#999;">Uncategorized</span>
                     @endif
                 </td>
+                <td>{{ $expense->payment_type ?: '-' }}</td>
                 <td>{{ $expense->expense_date->format('M d, Y') }}</td>
                 <td>{{ $currencySymbol }}{{ number_format($expense->amount, 2) }}</td>
+                <td>{{ $expense->notes ?: '-' }}</td>
                 <td>
                     <a href="{{ route('expenses.edit', $expense->id) }}" class="action-link edit-link">Edit</a>
                     <form method="POST" action="{{ route('expenses.destroy', $expense->id) }}" class="inline" onsubmit="return confirm('Delete this expense?');">

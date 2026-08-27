@@ -33,6 +33,14 @@ class SalesController extends Controller
             $query->where("fulfillment_status", $request->fulfillment_status);
         }
 
+        if ($request->filled("date_from")) {
+            $query->whereDate("shopify_created_at", ">=", $request->date_from);
+        }
+
+        if ($request->filled("date_to")) {
+            $query->whereDate("shopify_created_at", "<=", $request->date_to);
+        }
+
         $sort = $request->get("sort", "newest");
         switch ($sort) {
             case "oldest":
@@ -130,7 +138,7 @@ class SalesController extends Controller
         }
     }
 
-    public function syncAjax(Request $request, \App\Services\SalesSyncService $salesSyncService)
+    public function syncAjax(Request $request, SalesSyncService $salesSyncService)
     {
         $shop = Auth::user();
 
@@ -148,6 +156,23 @@ class SalesController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function syncCustomersOnly(Request $request, SalesSyncService $salesSyncService)
+    {
+        $shop = Auth::user();
+
+        try {
+            $customerCount = $salesSyncService->syncCustomers($shop);
+            $shop->customers_last_synced_at = now();
+            $shop->save();
+
+            return redirect()->route('sales.customers')
+                ->with('success', "Synced {$customerCount} customers from Shopify!");
+        } catch (\Exception $e) {
+            return redirect()->route('sales.customers')
+                ->with('error', 'Sync failed: ' . $e->getMessage());
         }
     }
 }

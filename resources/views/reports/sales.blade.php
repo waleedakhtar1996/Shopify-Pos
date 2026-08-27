@@ -13,6 +13,9 @@
 
 <h1>Total Sales Report</h1>
 
+@include('reports.partials.date-filter')
+
+
 <div class="stat-grid">
     <div class="stat-card"><div class="label">Total Sales</div><div class="value">{{ $currencySymbol }}{{ number_format($totalSales, 2) }}</div></div>
     <div class="stat-card"><div class="label">Total Orders</div><div class="value">{{ $totalOrders }}</div></div>

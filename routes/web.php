@@ -9,6 +9,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\Auth\ShopLoginController;
 
@@ -20,6 +21,15 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [DashboardController::class, 'profile'])->name('profile');
     Route::post('/profile', [DashboardController::class, 'updateProfile'])->name('profile.update');
+
+    Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+    Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
+    Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+    Route::get('/purchases/search-products', [PurchaseController::class, 'searchProducts'])->name('purchases.search-products');
+    Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::get('/purchases/{purchase}/edit', [PurchaseController::class, 'edit'])->name('purchases.edit');
+    Route::put('/purchases/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');
+    Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchases.destroy');
 
     Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
     Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
@@ -35,6 +45,11 @@ Route::group(['middleware' => ['auth']], function () {
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
     Route::get('/collections', [CollectionController::class, 'index'])->name('collections.index');
+    Route::post('/collections/sync', [CollectionController::class, 'sync'])->name('collections.sync');
+    Route::post('/collections/sync-ajax', [CollectionController::class, 'syncAjax'])->name('collections.sync.ajax');
+    Route::get('/collections/sync-list', [CollectionController::class, 'listForSync'])->name('collections.sync.list');
+    Route::post('/collections/sync-one/{id}', [CollectionController::class, 'syncOne'])->name('collections.sync.one');
+    Route::post('/collections/mark-synced', [CollectionController::class, 'markSynced'])->name('collections.mark.synced');
     Route::get('/collections/create', [CollectionController::class, 'create'])->name('collections.create');
     Route::post('/collections', [CollectionController::class, 'store'])->name('collections.store');
     Route::get('/collections/{collection}/edit', [CollectionController::class, 'edit'])->name('collections.edit');
@@ -45,6 +60,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/sales/{order}', [SalesController::class, 'show'])->name('sales.show');
     Route::post('/sales/sync', [SalesController::class, 'sync'])->name('sales.sync');
     Route::post('/sales/sync-ajax', [SalesController::class, 'syncAjax'])->name('sales.sync.ajax');
+    Route::get('/customers', [SalesController::class, 'customers'])->name('sales.customers');
+    Route::post('/customers/sync', [SalesController::class, 'syncCustomersOnly'])->name('sales.customers.sync');
     Route::get('/customers', [SalesController::class, 'customers'])->name('sales.customers');
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
@@ -79,5 +96,4 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get('/reports/payment-type', [ReportController::class, 'paymentType'])->name('reports.payment-type');
     Route::get('/reports/returns', [ReportController::class, 'returns'])->name('reports.returns');
     Route::post('/reports/returns/sync-ajax', [ReportController::class, 'returnsSyncAjax'])->name('reports.returns.sync.ajax');
-    Route::post('/collections/sync', [ProductController::class, 'syncCollections'])->name('collections.sync');
 });

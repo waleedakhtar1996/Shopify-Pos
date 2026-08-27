@@ -13,12 +13,17 @@
     table.customers-table th { text-align:left; padding:12px; background:#f5f5f5; font-size:13px; color:#555; }
     table.customers-table td { padding:12px; border-bottom:1px solid #eee; font-size:14px; }
     .pagination-wrap { margin-top:20px; }
+    .top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
 </style>
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+<div class="top-bar">
     <h1 style="margin:0;">Customers</h1>
-    <div>
-        <span id="syncTimer" style="font-size:13px; color:#555; background:#f0f0f0; padding:8px 14px; border-radius:20px; margin-right:10px; display:inline-block; font-weight:500;"></span>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span id="syncTimer" style="font-size:13px; color:#555; background:#f0f0f0; padding:8px 14px; border-radius:20px; display:inline-block; font-weight:500;"></span>
+        <form method="POST" action="{{ route('sales.customers.sync') }}" class="inline" style="display:inline;">
+            @csrf
+            <button type="submit" class="btn">🔄 Sync from Shopify</button>
+        </form>
     </div>
 </div>
 
@@ -60,13 +65,13 @@
                 <td>{{ $customer->city ?? '-' }}</td>
             </tr>
         @empty
-            <tr><td colspan="7" style="text-align:center; padding:30px; color:#888;">No customers found.</td></tr>
+            <tr><td colspan="7" style="text-align:center; padding:30px; color:#888;">No customers yet. Click "Sync from Shopify" to fetch them.</td></tr>
         @endforelse
     </tbody>
 </table>
 
 <div class="pagination-wrap">
-    {{ $customers->links("vendor.pagination.custom") }}
+    {{ $customers->links('vendor.pagination.custom') }}
 </div>
 
 <script>
@@ -81,10 +86,17 @@
         return m + ':' + sec.toString().padStart(2, '0');
     }
 
+    let syncing = false;
+
     function tick() {
         if (!timerEl) return;
         if (remaining <= 0) {
+            if (syncing) return;
+            syncing = true;
             timerEl.textContent = 'Syncing...';
+            if (window.showGlobalSyncOverlay) {
+                window.showGlobalSyncOverlay('Syncing from Shopify...', 'This may take a moment.');
+            }
             fetch("{{ route('sales.sync.ajax') }}", {
                 method: 'POST',
                 headers: {
@@ -97,6 +109,7 @@
                 window.location.reload();
             })
             .catch(() => {
+                syncing = false;
                 remaining = freq;
             });
             return;
